@@ -41,8 +41,8 @@ class SearchEngine:
 
     def do_action_by_copy(self, env, action):
         new_env = cp.deepcopy(env)
-        new_env.do_action(action)
-        return new_env
+        cost = new_env.do_action(action)
+        return new_env, cost
 
     def search(self, env) -> list:
         path = []
@@ -69,9 +69,9 @@ class SearchEngine:
 
     def select_ptr(self, queue, visited):
 
-        new_index = self.algorithm_dict[self.algorithm](queue)
+        new_index: int = self.algorithm_dict[self.algorithm](queue)
 
-        new_ptr = queue[new_index]
+        new_ptr: Node = queue[new_index]
         visited[new_ptr] = True
         queue.pop(new_index)
 
@@ -84,8 +84,11 @@ class SearchEngine:
 
             child.cost = new_ptr.cost + cost
             child.depth = new_ptr.depth + 1
-            child.total_fitness = new_ptr.total_fitness + child.get_fitness()
-            new_ptr.add_children(child)
+            pred_total_fitness = 0
+            if new_ptr.total_fitness is not None:
+                pred_total_fitness = new_ptr.total_fitness
+            child.total_fitness = pred_total_fitness + child.get_fitness()
+            new_ptr.add_child(child)
 
             if child not in visited and child.depth <= self.max_depth:
                 queue.append(child)
@@ -124,6 +127,9 @@ class Node:
         return id(self) == id(value)
 
     def __id__(self) -> int:
+        return hash(self)
+
+    def __hash__(self) -> int:
         return hash(self.value)
 
     def set_value(self, value):
