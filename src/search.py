@@ -104,7 +104,7 @@ class SearchEngine:
         raise NotImplementedError("Algorithm " + self.algorithm + " is not implemented yet!")
 
     def algo_random_walk(self, queue) -> int:
-        raise NotImplementedError("Algorithm " + self.algorithm + " is not implemented yet!")
+        return rd.randint(0, len(queue) - 1)
 
 
 class Node:
