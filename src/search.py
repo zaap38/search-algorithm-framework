@@ -17,7 +17,7 @@ class SearchEngine:
             'double_dijkstra': self.algo_double_dijkstra,
             'random_walk': self.algo_random_walk,
         }
-        
+
         if algorithm in self.algorithm_dict:
             self.algorithm = algorithm
         else:
@@ -32,10 +32,11 @@ class SearchEngine:
             self.do_action = lambda env, action: env.do_action(action)
 
         # self.env requires the following functions:
-        # - self.env.get_actions() -> list of available actions
-        # - self.env.do_action() -> env after the action was done
-        # - self.env.is_final() -> boolean whether the env is in a final state
-        # - self.env.fitness() -> fitness score of the current env
+        # - self.env.__hash__()    ->   hash of the environment
+        # - self.env.get_actions() ->   list of available actions
+        # - self.env.do_action()   ->   env and transition cost after the action was done
+        # - self.env.is_final()    ->   boolean whether the env is in a final state
+        # - self.env.fitness()     ->   fitness score of the current env
         self.env = None
 
     def do_action_by_copy(self, env, action):
@@ -43,28 +44,87 @@ class SearchEngine:
         new_env.do_action(action)
         return new_env
 
-    def search(self, env) -> tuple[list, float]:
-        path, fitness = self.algorithm_dict[self.algorithm](env)
-        return path, fitness
+    def search(self, env) -> list:
+        path = []
+        queue = [Node(env)]
+        visited = dict()
+        iteration = 0
 
-    def algo_astar(self, env):
+        ptr = self.select_ptr(queue, visited)
+
+        while not ptr.get_value().is_final():  # type: ignore
+            ptr = self.select_ptr(queue, visited)
+            iteration += 1
+            if iteration > self.max_iterations:
+                break
+
+        if ptr.get_value().is_final():  # type: ignore
+            path = []
+            while ptr.pred is not None:
+                path.append(ptr.last_action)
+                ptr = ptr.pred
+            return path
+
+        return path
+
+    def select_ptr(self, queue, visited):
+
+        new_index = self.algorithm_dict[self.algorithm](queue)
+
+        new_ptr = queue[new_index]
+        visited[new_ptr] = True
+        queue.pop(new_index)
+
+        for action in new_ptr.get_value().get_actions():
+            new_env, cost = self.do_action(new_ptr.get_value(), action)
+
+            child = Node(new_env)
+            child.pred = new_ptr
+            child.last_action = action
+
+            child.cost = new_ptr.cost + cost
+            child.depth = new_ptr.depth + 1
+            child.total_fitness = new_ptr.total_fitness + child.get_fitness()
+            new_ptr.add_children(child)
+
+            if child not in visited and child.depth <= self.max_depth:
+                queue.append(child)
+
+        return new_ptr
+
+
+
+    def algo_astar(self, queue) -> int:
         raise NotImplementedError("Algorithm " + self.algorithm + " is not implemented yet!")
 
-    def algo_dijkstra(self, env):
+    def algo_dijkstra(self, queue) -> int:
         raise NotImplementedError("Algorithm " + self.algorithm + " is not implemented yet!")
 
-    def algo_double_dijkstra(self, env):
+    def algo_double_dijkstra(self, queue) -> int:
         raise NotImplementedError("Algorithm " + self.algorithm + " is not implemented yet!")
 
-    def algo_random_walk(self, env):
+    def algo_random_walk(self, queue) -> int:
         raise NotImplementedError("Algorithm " + self.algorithm + " is not implemented yet!")
 
 
 class Node:
 
-    def __init__(self) -> None:
-        self.value = None
+    def __init__(self, value=None) -> None:
+        self.value: object = value
         self.children = []
+        self.pred = None
+        self.last_action = None
+
+        self.fitness = None
+        self.total_fitness = None
+        self.cost = 0
+        self.depth = 0
+
+    def __eq__(self, value: object) -> bool:
+        return id(self) == id(value)
+
+    def __id__(self) -> int:
+        return hash(self.value)
 
     def set_value(self, value):
         self.value = value
@@ -74,4 +134,9 @@ class Node:
 
     def add_child(self, child):
         self.children.append(child)
+
+    def get_fitness(self):
+        if self.fitness is None:
+            self.fitness = self.get_value().fitness()  # type: ignore
+        return self.fitness
     
