@@ -75,11 +75,11 @@ class SearchEngine:
         visited[new_ptr] = True
         queue.pop(new_index)
 
-        for action in new_ptr.get_value().get_actions():
+        for action in new_ptr.get_value().get_actions():  # type: ignore
             new_env, cost = self.do_action(new_ptr.get_value(), action)
 
             child = Node(new_env)
-            child.pred = new_ptr
+            child.pred = new_ptr  # type: ignore
             child.last_action = action
 
             child.cost = new_ptr.cost + cost
